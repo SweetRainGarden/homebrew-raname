@@ -7,6 +7,7 @@ ignore_case=false
 exclude_dirs=()
 dry_run=false
 undo=false
+copy_mode=false
 log_file="rename_log_$(date +%Y%m%d%H%M%S).log"
 undo_log="rename_undo.log"
 
@@ -29,6 +30,7 @@ usage() {
   echo "  -e, --exclude <dirs>    Comma-separated list of directories to exclude"
   echo "  --dry-run               Show what would be changed without modifying anything"
   echo "  --undo                  Revert the last rename operation"
+  echo "  --copy                  Create a renamed copy instead of renaming in-place"
   echo "  -h, --help              Show this help message"
   exit 1
 }
@@ -40,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     -e|--exclude) exclude_dirs=(${2//,/ }); shift 2 ;;
     --dry-run) dry_run=true; shift ;;
     --undo) undo=true; shift ;;
+    --copy) copy_mode=true; shift ;;
     -h|--help) usage ;;
     --) shift; break ;;  # End of options
     -*) echo "Unknown option: $1"; usage ;;
@@ -91,7 +94,21 @@ for ex in "${exclude_dirs[@]}"; do
   exclude_expr+=( -path "$target_dir/$ex" -prune -o )
 done
 
-# 1. Replace Text in File Contents First
+# **Use a temporary directory if in copy mode**
+if $copy_mode; then
+  temp_dir="$(mktemp -d)"
+  temp_target="$temp_dir/$(basename "$target_dir")"
+
+  if $dry_run; then
+    echo "Would copy root directory: $target_dir -> $temp_target"
+  else
+    log "Copying root directory to temporary location: $temp_target"
+    cp -r "$target_dir" "$temp_target"
+    target_dir="$temp_target"
+  fi
+fi
+
+# 1. Replace Text in File Contents First (Using Perl)
 find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d '' file; do
   if $dry_run; then
     echo "Would replace text in: $file"
@@ -99,7 +116,7 @@ find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d 
     if $ignore_case; then
       perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
     else
-      sed -i "s/$old_text/$new_text/g" "$file"
+      perl -pi -e "s/\Q$old_text\E/$new_text/g" "$file"
     fi
     log "Replaced text in: $file"
   fi
@@ -124,15 +141,21 @@ find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | whi
   [[ "$base" == "$new_base" ]] && continue
 
   new_path="$dir/$new_base"
-  
+
   if $dry_run; then
-    echo "Would rename: $item -> $new_path"
+    echo "Would ${copy_mode:+copy}rename: $item -> $new_path"
   else
     log "Renaming: $item -> $new_path"
     save_undo "$item|$new_path"
     mv "$item" "$new_path"
   fi
 done
+
+# **Move the processed temporary directory back to its original location**
+if $copy_mode && ! $dry_run; then
+  log "Moving processed directory back to original location: $target_dir -> $(dirname "$target_dir")"
+  mv "$target_dir" "$(dirname "$target_dir")/"
+fi
 
 if $dry_run; then
   echo "Dry run complete. No changes made."
