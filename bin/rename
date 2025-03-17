@@ -4,7 +4,7 @@ set -e  # Exit on error
 
 # Default settings
 ignore_case=false
-exclude_dirs=()
+exclude_dirs=(".DS_Store")  # Ignore .DS_Store by default
 dry_run=false
 undo=false
 copy_mode=false
@@ -39,7 +39,7 @@ usage() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -i|--ignore-case) ignore_case=true; shift ;;
-    -e|--exclude) exclude_dirs=(${2//,/ }); shift 2 ;;
+    -e|--exclude) exclude_dirs+=(${2//,/ }); shift 2 ;;  # Add to exclude list
     --dry-run) dry_run=true; shift ;;
     --undo) undo=true; shift ;;
     --copy) copy_mode=true; shift ;;
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Undo Mode
+# **Undo Mode: Restore File Content & Revert Renamed Files**
 if $undo; then
   if [[ ! -f "$undo_log" ]]; then
     echo "No undo log found!"
@@ -58,15 +58,30 @@ if $undo; then
   fi
 
   echo "Undoing last rename operation..."
-  tac "$undo_log" | while IFS= read -r line; do
-    original_name=$(echo "$line" | cut -d '|' -f1)
-    new_name=$(echo "$line" | cut -d '|' -f2)
-    
-    if [[ -e "$new_name" ]]; then
-      mv -v "$new_name" "$original_name"
-      log "Reverted: $new_name -> $original_name"
-    fi
-  done
+  while IFS='|' read -r old_text new_text; do
+    echo "Restoring: $new_text -> $old_text"
+
+    # Restore file content changes
+    find . -type f ! -name ".DS_Store" -print0 | while IFS= read -r -d '' file; do
+      if grep -q "$new_text" "$file"; then
+        log "Restoring content in: $file"
+        if $ignore_case; then
+          perl -pi -e "s/\Q$new_text\E/$old_text/gi" "$file"
+        else
+          perl -pi -e "s/\Q$new_text\E/$old_text/g" "$file"
+        fi
+      fi
+    done
+
+    # Restore renamed files & directories
+    find . -depth -name "*$new_text*" -print0 | while IFS= read -r -d '' item; do
+      renamed_item="${item//$new_text/$old_text}"
+      [[ "$item" == "$renamed_item" ]] && continue
+      mv -v "$item" "$renamed_item"
+      log "Reverted: $item -> $renamed_item"
+    done
+
+  done < "$undo_log"
 
   rm "$undo_log"
   echo "Undo complete."
@@ -108,46 +123,33 @@ if $copy_mode; then
   fi
 fi
 
-# 1. Replace Text in File Contents First (Using Perl)
-find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d '' file; do
+# 1. Replace Text in File Contents First and Log the Changes
+save_undo "$old_text|$new_text"  # Log the replacement pair
+find "$target_dir" "${exclude_expr[@]}" -type f ! -name ".DS_Store" -print0 | while IFS= read -r -d '' file; do
   if $dry_run; then
     echo "Would replace text in: $file"
   else
-    if $ignore_case; then
-      perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
-    else
-      perl -pi -e "s/\Q$old_text\E/$new_text/g" "$file"
+    if grep -q "$old_text" "$file"; then
+      if $ignore_case; then
+        perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
+      else
+        perl -pi -e "s/\Q$old_text\E/$new_text/g" "$file"
+      fi
+      log "Replaced text in: $file"
     fi
-    log "Replaced text in: $file"
   fi
 done
 
 # 2. Rename Files and Directories After Content Change
 find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
-  base="$(basename "$item")"
-  dir="$(dirname "$item")"
-
-  if $ignore_case; then
-    lc_base="${base,,}"
-    if [[ "$lc_base" == *"$lc_old_text"* ]]; then
-      new_base="${base//$old_text/$new_text}"
-    else
-      new_base="$base"
-    fi
-  else
-    new_base="${base//${old_text}/${new_text}}"
-  fi
-  
-  [[ "$base" == "$new_base" ]] && continue
-
-  new_path="$dir/$new_base"
+  new_item="${item//$old_text/$new_text}"
+  [[ "$item" == "$new_item" ]] && continue
 
   if $dry_run; then
-    echo "Would ${copy_mode:+copy}rename: $item -> $new_path"
+    echo "Would rename: $item -> $new_item"
   else
-    log "Renaming: $item -> $new_path"
-    save_undo "$item|$new_path"
-    mv "$item" "$new_path"
+    log "Renaming: $item -> $new_item"
+    mv "$item" "$new_item"
   fi
 done
 
