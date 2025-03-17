@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+set -e # Exit on error
+
+# Default settings
+ignore_case=false
+exclude_dirs=()
+dry_run=false
+undo=false
+log_file="rename_log_$(date +%Y%m%d%H%M%S).log"
+undo_log="rename_undo.log"
+
+# Function to log changes
+log() {
+  echo "$1" | tee -a "$log_file"
+}
+
+# Function to save undo data
+save_undo() {
+  echo "$1" >>"$undo_log"
+}
+
+# Usage guide
+usage() {
+  echo "Usage: rename [OPTIONS] <old_text> <new_text> [directory]"
+  echo ""
+  echo "Options:"
+  echo "  -i, --ignore-case       Case-insensitive matching"
+  echo "  -e, --exclude <dirs>    Comma-separated list of directories to exclude"
+  echo "  --dry-run               Show what would be changed without modifying anything"
+  echo "  --undo                  Revert the last rename operation"
+  echo "  -h, --help              Show this help message"
+  exit 1
+}
+
+# Parse CLI options
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -i | --ignore-case)
+    ignore_case=true
+    shift
+    ;;
+  -e | --exclude)
+    exclude_dirs=(${2//,/ })
+    shift 2
+    ;;
+  --dry-run)
+    dry_run=true
+    shift
+    ;;
+  --undo)
+    undo=true
+    shift
+    ;;
+  -h | --help) usage ;;
+  --)
+    shift
+    break
+    ;; # End of options
+  -*)
+    echo "Unknown option: $1"
+    usage
+    ;;
+  *) break ;; # Positional arguments
+  esac
+done
+
+# Undo Mode
+if $undo; then
+  if [[ ! -f "$undo_log" ]]; then
+    echo "No undo log found!"
+    exit 1
+  fi
+
+  echo "Undoing last rename operation..."
+  tac "$undo_log" | while IFS= read -r line; do
+    original_name=$(echo "$line" | cut -d '|' -f1)
+    new_name=$(echo "$line" | cut -d '|' -f2)
+
+    if [[ -e "$new_name" ]]; then
+      mv -v "$new_name" "$original_name"
+      log "Reverted: $new_name -> $original_name"
+    fi
+  done
+
+  rm "$undo_log"
+  echo "Undo complete."
+  exit 0
+fi
+
+# Require at least old_text and new_text
+if [[ $# -lt 2 ]]; then
+  usage
+fi
+
+old_text="$1"
+new_text="$2"
+target_dir="${3:-.}"
+
+# Convert case for ignore-case mode
+if $ignore_case; then
+  lc_old_text="${old_text,,}"
+  lc_new_text="${new_text,,}"
+fi
+
+# Exclude directories in find
+exclude_expr=()
+for ex in "${exclude_dirs[@]}"; do
+  exclude_expr+=(-path "$target_dir/$ex" -prune -o)
+done
+
+# 1. Rename Files and Directories
+find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
+  base="$(basename "$item")"
+  dir="$(dirname "$item")"
+
+  if $ignore_case; then
+    lc_base="${base,,}"
+    if [[ "$lc_base" == *"$lc_old_text"* ]]; then
+      new_base="${base//$old_text/$new_text}"
+    else
+      new_base="$base"
+    fi
+  else
+    new_base="${base//${old_text}/${new_text}}"
+  fi
+
+  [[ "$base" == "$new_base" ]] && continue
+
+  new_path="$dir/$new_base"
+
+  if $dry_run; then
+    echo "Would rename: $item -> $new_path"
+  else
+    log "Renaming: $item -> $new_path"
+    save_undo "$item|$new_path"
+    mv "$item" "$new_path"
+  fi
+done
+
+# 2. Replace Text in File Contents
+find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d '' file; do
+  if $dry_run; then
+    echo "Would replace text in: $file"
+  else
+    if $ignore_case; then
+      perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
+    else
+      sed -i "s/$old_text/$new_text/g" "$file"
+    fi
+    log "Replaced text in: $file"
+  fi
+done
+
+if $dry_run; then
+  echo "Dry run complete. No changes made."
+else
+  log "Rename operation completed."
+fi
