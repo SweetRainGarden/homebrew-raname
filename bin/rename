@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e # Exit on error
+set -e  # Exit on error
 
 # Default settings
 ignore_case=false
@@ -17,7 +17,7 @@ log() {
 
 # Function to save undo data
 save_undo() {
-  echo "$1" >>"$undo_log"
+  echo "$1" >> "$undo_log"
 }
 
 # Usage guide
@@ -36,32 +36,14 @@ usage() {
 # Parse CLI options
 while [[ $# -gt 0 ]]; do
   case "$1" in
-  -i | --ignore-case)
-    ignore_case=true
-    shift
-    ;;
-  -e | --exclude)
-    exclude_dirs=(${2//,/ })
-    shift 2
-    ;;
-  --dry-run)
-    dry_run=true
-    shift
-    ;;
-  --undo)
-    undo=true
-    shift
-    ;;
-  -h | --help) usage ;;
-  --)
-    shift
-    break
-    ;; # End of options
-  -*)
-    echo "Unknown option: $1"
-    usage
-    ;;
-  *) break ;; # Positional arguments
+    -i|--ignore-case) ignore_case=true; shift ;;
+    -e|--exclude) exclude_dirs=(${2//,/ }); shift 2 ;;
+    --dry-run) dry_run=true; shift ;;
+    --undo) undo=true; shift ;;
+    -h|--help) usage ;;
+    --) shift; break ;;  # End of options
+    -*) echo "Unknown option: $1"; usage ;;
+    *) break ;;  # Positional arguments
   esac
 done
 
@@ -76,7 +58,7 @@ if $undo; then
   tac "$undo_log" | while IFS= read -r line; do
     original_name=$(echo "$line" | cut -d '|' -f1)
     new_name=$(echo "$line" | cut -d '|' -f2)
-
+    
     if [[ -e "$new_name" ]]; then
       mv -v "$new_name" "$original_name"
       log "Reverted: $new_name -> $original_name"
@@ -106,10 +88,24 @@ fi
 # Exclude directories in find
 exclude_expr=()
 for ex in "${exclude_dirs[@]}"; do
-  exclude_expr+=(-path "$target_dir/$ex" -prune -o)
+  exclude_expr+=( -path "$target_dir/$ex" -prune -o )
 done
 
-# 1. Rename Files and Directories
+# 1. Replace Text in File Contents First
+find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d '' file; do
+  if $dry_run; then
+    echo "Would replace text in: $file"
+  else
+    if $ignore_case; then
+      perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
+    else
+      sed -i "s/$old_text/$new_text/g" "$file"
+    fi
+    log "Replaced text in: $file"
+  fi
+done
+
+# 2. Rename Files and Directories After Content Change
 find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
   base="$(basename "$item")"
   dir="$(dirname "$item")"
@@ -124,31 +120,17 @@ find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | whi
   else
     new_base="${base//${old_text}/${new_text}}"
   fi
-
+  
   [[ "$base" == "$new_base" ]] && continue
 
   new_path="$dir/$new_base"
-
+  
   if $dry_run; then
     echo "Would rename: $item -> $new_path"
   else
     log "Renaming: $item -> $new_path"
     save_undo "$item|$new_path"
     mv "$item" "$new_path"
-  fi
-done
-
-# 2. Replace Text in File Contents
-find "$target_dir" "${exclude_expr[@]}" -type f -print0 | while IFS= read -r -d '' file; do
-  if $dry_run; then
-    echo "Would replace text in: $file"
-  else
-    if $ignore_case; then
-      perl -pi -e "s/\Q$old_text\E/$new_text/gi" "$file"
-    else
-      sed -i "s/$old_text/$new_text/g" "$file"
-    fi
-    log "Replaced text in: $file"
   fi
 done
 
