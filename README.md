@@ -1,15 +1,15 @@
-# rename
+# raname
 
-A powerful command-line utility for renaming files and directories while also updating their contents.
+A command-line utility to rename files and directories recursively, replacing text in both file/directory names and their contents.
 
 ## Features
 
-- Rename files and directories recursively
-- Update file contents to match the new names
-- Case-sensitive and case-insensitive matching
+- Raname files and directories recursively
+- Replace text in file contents
+- Case-insensitive matching
+- Copy mode to create ranamed copies instead of moving
 - Dry run mode to preview changes
-- Copy mode to create renamed copies instead of moving
-- Directory exclusion support
+- Exclude specific directories
 
 ## Installation
 
@@ -17,65 +17,67 @@ A powerful command-line utility for renaming files and directories while also up
 
 ```bash
 # Add the tap
-brew tap SweetRainGarden/rename
+brew tap SweetRainGarden/raname
 
 # Install the formula
-brew install rename
+brew install raname
 ```
 
 ### Manual Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/SweetRainGarden/homebrew-rename.git
-cd homebrew-rename
+git clone https://github.com/SweetRainGarden/homebrew-raname.git
+cd homebrew-raname
 
 # Make the script executable
-chmod +x bin/rename
+chmod +x bin/raname
 
 # Optional: Add to your PATH
-ln -s "$(pwd)/bin/rename" /usr/local/bin/rename
+ln -s "$(pwd)/bin/raname" /usr/local/bin/raname
 ```
 
 ## Usage
 
 ```bash
-rename [options] old_name new_name directory
+raname [options] old_name new_name directory
 ```
 
 ### Options
 
-- `-i, --ignore-case`: Perform case-insensitive matching
-- `-e, --exclude <dir>`: Exclude directory from renaming
-- `--dry-run`: Show what would be renamed without making changes
-- `--copy`: Create renamed copies instead of moving files
+- `-i, --ignore-case`: Case-insensitive matching
+- `-e, --exclude <dirs>`: Comma-separated list of directories to exclude
+- `--dry-run`: Show what would be ranamed without making changes
+- `--copy`: Create ranamed copies instead of moving files
+- `-h, --help`: Show help message
 
 ### Examples
 
 ```bash
-# Basic rename
-rename foo bar ./my_project
+# Basic raname
+raname foo bar ./my_project
 
-# Case-insensitive rename
-rename -i Foo bar ./my_project
+# Case-insensitive raname
+raname -i Foo bar ./my_project
 
-# Preview changes without applying them
-rename --dry-run foo bar ./my_project
+# Dry run to preview changes
+raname --dry-run foo bar ./my_project
 
-# Create renamed copies instead of moving
-rename --copy foo bar ./my_project
+# Create ranamed copies instead of moving
+raname --copy foo bar ./my_project
 
-# Exclude specific directories
-rename -e node_modules -e .git foo bar ./my_project
+# Exclude directories
+raname -e node_modules -e .git foo bar ./my_project
 ```
 
 ## How it Works
 
-The utility performs renaming in two phases:
-1. First, it renames all files and directories except the target directory
-2. Then, it renames the target directory itself
+The script processes files and directories in the following order:
 
-This approach prevents issues with path changes during the operation.
+1. First, it ranames all files and directories except the target directory
+2. Then, it ranames the target directory itself
+
+This ensures that nested files and directories are processed correctly.
 
 For file contents, it:
 1. Identifies files containing the old name

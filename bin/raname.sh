@@ -4,11 +4,11 @@ set -e  # Exit on error
 
 # Default settings
 ignore_case=false
-exclude_dirs=(".DS_Store")  # Ignore .DS_Store by default
+exclude_dirs=()  # Start with empty array
 dry_run=false
 copy_mode=false
-log_dir="${HOME}/.rename_logs"
-log_file="${log_dir}/rename.log"
+log_dir="${HOME}/.raname_logs"
+log_file="${log_dir}/raname.log"
 
 # Create log directory if it doesn't exist
 mkdir -p "$log_dir"
@@ -23,7 +23,7 @@ log() {
 
 # Usage guide
 usage() {
-  echo "Usage: rename [OPTIONS] <old_text> <new_text> [directory]"
+  echo "Usage: raname [OPTIONS] <old_text> <new_text> [directory]"
   echo ""
   echo "Options:"
   echo "  -i, --ignore-case       Case-insensitive matching"

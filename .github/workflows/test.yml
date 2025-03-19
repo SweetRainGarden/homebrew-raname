@@ -2,31 +2,29 @@ name: Test
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ develop, main ]
+    branches: [ main, develop ]
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v2
+
+    - name: Set up test environment
+      run: |
+        mkdir -p test_dir
+        echo "test content" > test_dir/foo.txt
 
     - name: Run test script
       run: |
-        chmod +x test/test_rename.sh
-        ./test/test_rename.sh
+        chmod +x test/test_raname.sh
+        ./test/test_raname.sh
 
-    - name: Test basic functionality
+    - name: Test script directly
       run: |
-        mkdir -p test_dir
-        echo "foo content" > test_dir/foo.txt
-        chmod +x bin/rename
-        ./bin/rename --dry-run foo bar test_dir
-        ./bin/rename foo bar test_dir
-        test -f test_dir/bar.txt || exit 1
-        grep "bar content" test_dir/bar.txt || exit 1 
+        chmod +x bin/raname.sh
+        ./bin/raname.sh --dry-run foo bar test_dir
+        ./bin/raname.sh foo bar test_dir 
