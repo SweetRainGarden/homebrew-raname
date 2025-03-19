@@ -98,10 +98,10 @@ run_test() {
 
 # Create test directory
 TEST_DIR="test_dir"
-setup_test_dir "$TEST_DIR"
 
 # Test 1: Basic rename
 echo "Test 1: Basic rename"
+setup_test_dir "$TEST_DIR"
 run_test "Basic rename" \
     "bash bin/rename foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
