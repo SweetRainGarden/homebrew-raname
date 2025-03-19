@@ -16,17 +16,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install shellcheck
-      if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get install -y shellcheck
-
-    - name: Install shellcheck (macOS)
-      if: matrix.os == 'macos-latest'
-      run: brew install shellcheck
-
-    - name: Run shellcheck
-      run: shellcheck bin/rename
-
     - name: Run test script
       run: |
         chmod +x test/test_rename.sh

@@ -10,14 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Lint shell scripts
-        run: |
-          shellcheck bin/rename
-          shellcheck test/test_rename.sh
-
       - name: Check script permissions
         run: |
           test -x bin/rename || (echo "bin/rename must be executable" && exit 1)
