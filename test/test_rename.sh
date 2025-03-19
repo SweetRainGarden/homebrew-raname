@@ -103,7 +103,7 @@ TEST_DIR="test_dir"
 echo "Test 1: Basic rename"
 setup_test_dir "$TEST_DIR"
 run_test "Basic rename" \
-    "bash bin/rename foo zoo $TEST_DIR" \
+    "bash bin/rename.sh foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
@@ -113,7 +113,7 @@ $TEST_DIR/zoo.txt" \
 echo "Test 2: Case-insensitive rename"
 setup_test_dir "$TEST_DIR"
 run_test "Case-insensitive rename" \
-    "bash bin/rename -i Foo zoo $TEST_DIR" \
+    "bash bin/rename.sh -i Foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
@@ -123,7 +123,7 @@ $TEST_DIR/zoo.txt" \
 echo "Test 3: Dry run"
 setup_test_dir "$TEST_DIR"
 run_test "Dry run" \
-    "bash bin/rename --dry-run foo zoo $TEST_DIR" \
+    "bash bin/rename.sh --dry-run foo zoo $TEST_DIR" \
     "$TEST_DIR/foobar/foobarcat/foo.txt
 $TEST_DIR/foobar/foo.txt
 $TEST_DIR/foo.txt" \
@@ -133,7 +133,7 @@ $TEST_DIR/foo.txt" \
 echo "Test 4: Copy mode"
 setup_test_dir "$TEST_DIR"
 run_test "Copy mode" \
-    "bash bin/rename --copy foo zoo $TEST_DIR" \
+    "bash bin/rename.sh --copy foo zoo $TEST_DIR" \
     "$TEST_DIR/foobar/foobarcat/foo.txt
 $TEST_DIR/foobar/foo.txt
 $TEST_DIR/foo.txt
@@ -148,7 +148,7 @@ setup_test_dir "$TEST_DIR"
 mkdir -p "$TEST_DIR/exclude_me"
 echo "foo in excluded dir" > "$TEST_DIR/exclude_me/foo.txt"
 run_test "Exclude directories" \
-    "bash bin/rename -e exclude_me foo zoo $TEST_DIR" \
+    "bash bin/rename.sh -e exclude_me foo zoo $TEST_DIR" \
     "$TEST_DIR/exclude_me/foo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
@@ -161,7 +161,7 @@ setup_test_dir "$TEST_DIR"
 mkdir -p "$TEST_DIR/foo bar"
 echo "foo in spaced dir" > "$TEST_DIR/foo bar/foo.txt"
 run_test "Rename with spaces" \
-    "bash bin/rename 'foo bar' 'zoo bar' $TEST_DIR" \
+    "bash bin/rename.sh 'foo bar' 'zoo bar' $TEST_DIR" \
     "$TEST_DIR/zoo bar/zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
@@ -174,7 +174,7 @@ setup_test_dir "$TEST_DIR"
 mkdir -p "$TEST_DIR/foo*bar"
 echo "foo in special dir" > "$TEST_DIR/foo*bar/foo.txt"
 run_test "Special characters" \
-    "bash bin/rename 'foo*bar' 'zoo*bar' $TEST_DIR" \
+    "bash bin/rename.sh 'foo*bar' 'zoo*bar' $TEST_DIR" \
     "$TEST_DIR/zoo*bar/zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
@@ -186,7 +186,7 @@ echo "Test 8: Multiple occurrences"
 setup_test_dir "$TEST_DIR"
 echo "foo foo foo" > "$TEST_DIR/multiple_foo.txt"
 run_test "Multiple occurrences" \
-    "bash bin/rename foo zoo $TEST_DIR" \
+    "bash bin/rename.sh foo zoo $TEST_DIR" \
     "$TEST_DIR/multiple_zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
@@ -198,7 +198,7 @@ echo "Test 9: Empty directory"
 setup_test_dir "$TEST_DIR"
 mkdir -p "$TEST_DIR/empty_dir"
 run_test "Empty directory" \
-    "bash bin/rename foo zoo $TEST_DIR" \
+    "bash bin/rename.sh foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
@@ -209,7 +209,7 @@ echo "Test 10: Hidden files"
 setup_test_dir "$TEST_DIR"
 echo "foo in hidden file" > "$TEST_DIR/.foo.txt"
 run_test "Hidden files" \
-    "bash bin/rename foo zoo $TEST_DIR" \
+    "bash bin/rename.sh foo zoo $TEST_DIR" \
     "$TEST_DIR/.zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
 $TEST_DIR/zoobar/zoobar/zoo.txt
