@@ -57,6 +57,11 @@ old_text="$1"
 new_text="$2"
 target_dir="${3:-.}"
 
+# Get absolute path of target directory
+target_dir=$(realpath "$target_dir")
+parent_dir=$(dirname "$target_dir")
+dir_name=$(basename "$target_dir")
+
 # Convert case for ignore-case mode
 if $ignore_case; then
   lc_old_text="${old_text,,}"
@@ -100,7 +105,8 @@ find "$target_dir" "${exclude_expr[@]}" -type f ! -name ".DS_Store" -print0 | wh
 done
 
 # 2. Rename Files and Directories After Content Change
-find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
+# First, rename all files and subdirectories (excluding the target directory itself)
+find "$target_dir" -depth "${exclude_expr[@]}" ! -path "$target_dir" -type f -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
     new_item="${item//$old_text/$new_text}"
     [[ "$item" == "$new_item" ]] && continue
 
@@ -111,6 +117,38 @@ find "$target_dir" -depth "${exclude_expr[@]}" -name "*$old_text*" -print0 | whi
         mv "$item" "$new_item"
     fi
 done
+
+# Then rename directories from deepest to shallowest
+find "$target_dir" -depth "${exclude_expr[@]}" ! -path "$target_dir" -type d -name "*$old_text*" -print0 | while IFS= read -r -d '' item; do
+    new_item="${item//$old_text/$new_text}"
+    [[ "$item" == "$new_item" ]] && continue
+
+    if $dry_run; then
+        echo "Would rename: $item -> $new_item"
+    else
+        log "RENAME" "Renaming: $item -> $new_item"
+        mv "$item" "$new_item"
+    fi
+done
+
+# Finally, rename the target directory itself if needed
+if [[ "$dir_name" == *"$old_text"* ]]; then
+    new_dir_name="${dir_name//$old_text/$new_text}"
+    new_target_dir="$parent_dir/$new_dir_name"
+    
+    if $dry_run; then
+        echo "Would rename directory: $target_dir -> $new_target_dir"
+    else
+        log "RENAME" "Renaming directory: $target_dir -> $new_target_dir"
+        mv "$target_dir" "$new_target_dir"
+        target_dir="$new_target_dir"  # Update target_dir for copy mode
+    fi
+fi
+
+# Cleanup empty directories
+if ! $dry_run; then
+    find "$target_dir" -type d -empty -delete 2>/dev/null || true
+fi
 
 # **Move the processed temporary directory back to its original location**
 if $copy_mode && ! $dry_run; then
