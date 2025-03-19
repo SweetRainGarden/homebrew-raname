@@ -1,43 +1,46 @@
 # SweetRainGarden/homebrew-rename
 
-This is a Homebrew tap for the rename utility.
+This tap provides the `rename` utility for Homebrew.
 
 ## Installation
 
 ```bash
 brew tap SweetRainGarden/rename
+brew install rename
 ```
 
 ## Usage
 
-After installation, you can use the rename utility:
-
 ```bash
-rename [options] old_name new_name directory
+rename [options] old_text new_text directory
 ```
 
-## Options
-
-- `-i, --ignore-case`: Ignore case when matching
-- `-e, --exclude`: Exclude directories from renaming
-- `--dry-run`: Show what would be renamed without making changes
-- `--copy`: Copy files instead of moving them
+Options:
+- `-i, --ignore-case`: Case-insensitive matching
+- `-e, --exclude-dir`: Exclude directories matching pattern
+- `-n, --dry-run`: Show what would be renamed without making changes
+- `-c, --copy`: Copy files instead of renaming them
+- `-v, --version`: Show version information
 
 ## Examples
 
 ```bash
 # Basic rename
-rename foo zoo my_directory
+rename foo bar ./test_dir
 
 # Case-insensitive rename
-rename -i Foo zoo my_directory
+rename -i Foo bar ./test_dir
 
 # Dry run
-rename --dry-run foo zoo my_directory
+rename --dry-run foo bar ./test_dir
 
 # Copy mode
-rename --copy foo zoo my_directory
+rename --copy foo bar ./test_dir
 
 # Exclude directories
-rename -e exclude_me foo zoo my_directory
-``` 
+rename -e exclude_me foo bar ./test_dir
+```
+
+## License
+
+MIT License 
