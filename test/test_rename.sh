@@ -44,6 +44,10 @@ verify_structure() {
 verify_content() {
     local file="$1"
     local expected="$2"
+    if [ ! -f "$file" ]; then
+        echo "File not found: $file"
+        return 1
+    fi
     local actual=$(cat "$file")
     if [ "$actual" = "$expected" ]; then
         return 0
@@ -72,7 +76,7 @@ run_test() {
     if verify_structure "$TEST_DIR" "$expected_structure"; then
         # Verify content if specified
         if [ -n "$expected_content" ]; then
-            if verify_content "$TEST_DIR/$expected_content" "zoo test content"; then
+            if verify_content "$expected_content" "zoo test content"; then
                 echo -e "${GREEN}PASSED${NC}"
                 ((TESTS_PASSED++))
             else
