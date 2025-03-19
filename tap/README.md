@@ -1,44 +1,34 @@
-# SweetRainGarden/homebrew-rename
+# homebrew-raname
 
-This tap provides the `rename` utility for Homebrew.
+This is the Homebrew tap for the `raname` utility.
 
 ## Installation
 
 ```bash
-brew tap SweetRainGarden/rename
-brew install rename
+brew tap SweetRainGarden/raname
+brew install raname
 ```
 
 ## Usage
 
 ```bash
-rename [options] old_text new_text directory
+raname [options] <old_text> <new_text> <directory>
 ```
 
-Options:
-- `-i, --ignore-case`: Case-insensitive matching
-- `-e, --exclude-dir`: Exclude directories matching pattern
-- `-n, --dry-run`: Show what would be renamed without making changes
-- `-c, --copy`: Copy files instead of renaming them
-- `-v, --version`: Show version information
+## Options
+
+- `--copy`: Copy files instead of renaming them
+- `--version`: Show version information
+- `--help`: Show help message
 
 ## Examples
 
 ```bash
-# Basic rename
-rename foo bar ./test_dir
+# Rename all files and directories containing "foo" to "bar"
+raname foo bar ./my_directory
 
-# Case-insensitive rename
-rename -i Foo bar ./test_dir
-
-# Dry run
-rename --dry-run foo bar ./test_dir
-
-# Copy mode
-rename --copy foo bar ./test_dir
-
-# Exclude directories
-rename -e exclude_me foo bar ./test_dir
+# Copy files instead of renaming them
+raname --copy foo bar ./my_directory
 ```
 
 ## License
