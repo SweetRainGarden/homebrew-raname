@@ -28,11 +28,12 @@ verify_structure() {
     local dir="$1"
     local expected="$2"
     local actual=$(find "$dir" -type f | sort)
-    if [ "$actual" = "$expected" ]; then
+    local expected_sorted=$(echo "$expected" | sort)
+    if [ "$actual" = "$expected_sorted" ]; then
         return 0
     else
         echo "Expected:"
-        echo "$expected"
+        echo "$expected_sorted"
         echo "Got:"
         echo "$actual"
         return 1
