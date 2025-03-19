@@ -1,0 +1,34 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          shellcheck bin/rename
+          shellcheck test/test_rename.sh
+
+      - name: Check script permissions
+        run: |
+          test -x bin/rename || (echo "bin/rename must be executable" && exit 1)
+          test -x test/test_rename.sh || (echo "test/test_rename.sh must be executable" && exit 1)
+
+      - name: Run tests
+        run: ./test/test_rename.sh
+
+      - name: Verify documentation
+        run: |
+          test -f README.md || (echo "README.md is missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE is missing" && exit 1)
+          grep -q "## Usage" README.md || (echo "Usage section missing in README" && exit 1)
+          grep -q "## Installation" README.md || (echo "Installation section missing in README" && exit 1) 

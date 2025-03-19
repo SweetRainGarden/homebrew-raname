@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install shellcheck
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get install -y shellcheck
+
+    - name: Install shellcheck (macOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install shellcheck
+
+    - name: Run shellcheck
+      run: shellcheck bin/rename
+
+    - name: Run test script
+      run: |
+        chmod +x test/test_rename.sh
+        ./test/test_rename.sh
+
+    - name: Test basic functionality
+      run: |
+        mkdir -p test_dir
+        echo "foo content" > test_dir/foo.txt
+        chmod +x bin/rename
+        ./bin/rename --dry-run foo bar test_dir
+        ./bin/rename foo bar test_dir
+        test -f test_dir/bar.txt || exit 1
+        grep "bar content" test_dir/bar.txt || exit 1 

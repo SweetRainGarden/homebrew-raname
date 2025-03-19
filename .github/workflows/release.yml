@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ env.VERSION }} \
+            --title "Release ${{ env.VERSION }}" \
+            --generate-notes
+
+      - name: Update Homebrew formula
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download the release tarball
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${{ env.VERSION }}.tar.gz"
+          wget $TARBALL_URL
+          
+          # Calculate SHA256
+          SHA256=$(sha256sum "${{ env.VERSION }}.tar.gz" | cut -d' ' -f1)
+          
+          # Update formula
+          sed -i "s|url.*|url \"$TARBALL_URL\"|" tap/Formula/rename.rb
+          sed -i "s|sha256.*|sha256 \"$SHA256\"|" tap/Formula/rename.rb
+          
+          # Commit and push changes
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+          git add tap/Formula/rename.rb
+          git commit -m "Update formula for ${{ env.VERSION }}"
+          git push 
