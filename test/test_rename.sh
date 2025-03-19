@@ -14,7 +14,7 @@ TESTS_FAILED=0
 # Helper function to create test directories
 setup_test_dir() {
     local dir="$1"
-    rm -rf "$dir"
+    rm -rf "$dir" "$dir"_zoo
     mkdir -p "$dir"
     echo "foo test content" > "$dir/foo.txt"
     mkdir -p "$dir/foobar"
@@ -91,6 +91,9 @@ run_test() {
         echo -e "${RED}FAILED${NC} (structure mismatch)"
         ((TESTS_FAILED++))
     fi
+    
+    # Cleanup after each test
+    rm -rf "$TEST_DIR" "$TEST_DIR"_zoo
 }
 
 # Create test directory
@@ -219,9 +222,6 @@ echo "Test Summary:"
 echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
 echo -e "${RED}Failed: $TESTS_FAILED${NC}"
 echo "----------------------------------------"
-
-# Cleanup
-rm -rf "$TEST_DIR" "$TEST_DIR"_zoo
 
 # Exit with error if any tests failed
 if [ $TESTS_FAILED -gt 0 ]; then
