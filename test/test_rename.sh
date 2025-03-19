@@ -97,7 +97,7 @@ echo "Test 1: Basic rename"
 run_test "Basic rename" \
     "bash bin/rename foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -107,7 +107,7 @@ setup_test_dir "$TEST_DIR"
 run_test "Case-insensitive rename" \
     "bash bin/rename -i Foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -130,7 +130,7 @@ run_test "Copy mode" \
 $TEST_DIR/foobar/foo.txt
 $TEST_DIR/foo.txt
 $TEST_DIR_zoo/zoobar/zoobarcat/zoo.txt
-$TEST_DIR_zoo/zoobar/zoo.txt
+$TEST_DIR_zoo/zoobar/zoobar/zoo.txt
 $TEST_DIR_zoo/zoo.txt" \
     "$TEST_DIR_zoo/zoo.txt"
 
@@ -143,7 +143,7 @@ run_test "Exclude directories" \
     "bash bin/rename -e exclude_me foo zoo $TEST_DIR" \
     "$TEST_DIR/exclude_me/foo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -156,7 +156,7 @@ run_test "Rename with spaces" \
     "bash bin/rename 'foo bar' 'zoo bar' $TEST_DIR" \
     "$TEST_DIR/zoo bar/zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -169,7 +169,7 @@ run_test "Special characters" \
     "bash bin/rename 'foo*bar' 'zoo*bar' $TEST_DIR" \
     "$TEST_DIR/zoo*bar/zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -181,7 +181,7 @@ run_test "Multiple occurrences" \
     "bash bin/rename foo zoo $TEST_DIR" \
     "$TEST_DIR/multiple_zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/multiple_zoo.txt"
 
@@ -192,7 +192,7 @@ mkdir -p "$TEST_DIR/empty_dir"
 run_test "Empty directory" \
     "bash bin/rename foo zoo $TEST_DIR" \
     "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
@@ -204,7 +204,7 @@ run_test "Hidden files" \
     "bash bin/rename foo zoo $TEST_DIR" \
     "$TEST_DIR/.zoo.txt
 $TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoo.txt
+$TEST_DIR/zoobar/zoobar/zoo.txt
 $TEST_DIR/zoo.txt" \
     "$TEST_DIR/zoo.txt"
 
