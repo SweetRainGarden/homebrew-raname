@@ -1,9 +1,8 @@
 class Rename < Formula
-  desc "Recursively rename files, directories, and replace content"
-  homepage "https://github.com/SweetRainGarden/BrewRename"
-  url "https://github.com/SweetRainGarden/BrewRename/archive/refs/tags/1.0.0.0.zip"
-  sha256 "a2777bddd0a986345bc74de4c018606da38fab56"
-  version "1.0"
+  desc "A utility for renaming files and directories with content replacement"
+  homepage "https://github.com/SweetRainGarden/homebrew-rename"
+  url "https://github.com/SweetRainGarden/homebrew-rename/archive/refs/tags/v1.0.0.1.tar.gz"
+  sha256 "6c5d30b040d207cf95daa9f132f935ae0fc3a27a23f07b7fbb2dae2a873269a3"
   license "MIT"
 
   def install
@@ -11,6 +10,9 @@ class Rename < Formula
   end
 
   test do
-    system "#{bin}/rename", "--help"
+    # Create a test directory
+    testpath.mkpath
+    (testpath/"foo.txt").write("test content")
+    system "#{bin}/rename", "--dry-run", "foo", "bar", testpath.to_s
   end
-end
+end 
