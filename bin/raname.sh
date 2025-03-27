@@ -362,6 +362,44 @@ if [ "$dry_run" = "false" ]; then
 
 
     echo "All changes completed in: $final_dir"
+
+    # Handle copy mode when root has changed
+    if [ "$copy_mode" = "true" ] && [ "$root_changed" = "true" ]; then
+        echo "Copy mode: Copying final directory to parent directory..."
+        
+        # Check if parent directory exists and is writable
+        if [ ! -d "$parent_dir" ]; then
+            echo "Error: Parent directory '$parent_dir' does not exist"
+            exit 1
+        fi
+        
+        if [ ! -w "$parent_dir" ]; then
+            echo "Error: No write permission for parent directory '$parent_dir'"
+            exit 1
+        fi
+        
+        # Check if new root directory exists in final_dir
+        if [ ! -d "$final_dir/$new_root" ]; then
+            echo "Error: New root directory '$new_root' not found in final directory"
+            exit 1
+        fi
+        
+        # Check if target already exists in parent directory
+        if [ -d "$parent_dir/$new_root" ]; then
+            echo "Error: Directory '$new_root' already exists in parent directory '$parent_dir'"
+            echo "Please remove or rename the existing directory first"
+            exit 1
+        fi
+        
+        # Attempt to copy
+        if cp -r "$final_dir/$new_root" "$parent_dir/"; then
+            echo "Successfully copied to: $parent_dir/$new_root"
+        else
+            echo "Error: Failed to copy directory to parent directory"
+            exit 1
+        fi
+    fi
+
     echo "Opening final directory..."
     open "$final_dir"
     echo "Changes completed successfully."
