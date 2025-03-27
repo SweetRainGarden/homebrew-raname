@@ -196,6 +196,7 @@ done
 echo "Dry run - would perform the following operations:"
 echo "----------------------------------------"
 echo "Directory: $target_dir"
+
 echo "Changes:"
 
 # Get line counts
@@ -211,6 +212,19 @@ fi
 # Create a combined file with original and final paths
 paste "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt" > "$structure_dir/combined.txt"
 
+# Check if root directory name changed
+root_changed=false
+first_line=$(head -n 1 "$structure_dir/combined.txt")
+if [ -n "$first_line" ]; then
+    old_root=$(echo "$first_line" | cut -f1 | xargs basename)
+    new_root=$(echo "$first_line" | cut -f2 | xargs basename)
+    if [ "$old_root" != "$new_root" ]; then
+        root_changed=true
+        echo "Root directory will be renamed from '$old_root' to '$new_root'"
+    else
+        echo "Root directory name '$old_root' remains unchanged"
+    fi
+fi
 
 # Compare original and final structures for all paths
 while IFS=$'\t' read -r old_path new_path; do
