@@ -277,21 +277,23 @@ if [ "$dry_run" = "false" ]; then
     echo "Processing file moves and renames..."
     while IFS=$'\t' read -r old_path new_path; do
         if [ -n "$old_path" ] && [ -n "$new_path" ]; then
-            # Convert paths to be relative to target directory
+            # Convert paths to be relative to temp directory
             rel_old_path="${old_path#$temp_dir/}"
             rel_new_path="${new_path#$temp_dir/}"
             
-            echo "  Moving: $rel_old_path -> $rel_new_path"
-            # Create target directory if it doesn't exist
-            target_dir="$final_dir/$(dirname "$rel_new_path")"
-            mkdir -p "$target_dir"
-            
-            # Copy with overwrite
-            if [ -f "$temp_dir/$rel_old_path" ]; then
-                cp -f "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
-            elif [ -d "$temp_dir/$rel_old_path" ]; then
-                cp -rf "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
-            fi
+            # if [ "$rel_old_path" != "$rel_new_path" ]; then
+                echo "  Copying: $rel_old_path -> $rel_new_path"
+                # Create target directory if it doesn't exist
+                target_dir="$final_dir/$(dirname "$rel_new_path")"
+                mkdir -p "$target_dir"
+                
+                # Copy with overwrite
+                if [ -f "$temp_dir/$rel_old_path" ]; then
+                    cp -f "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+                elif [ -d "$temp_dir/$rel_old_path" ]; then
+                    cp -rf "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+                fi
+            # fi
         fi
     done < "$structure_dir/combined.txt"
     
