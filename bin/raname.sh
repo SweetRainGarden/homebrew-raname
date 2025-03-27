@@ -156,6 +156,35 @@ done
 echo "Saving all variations to: $structure_dir/all_variations.txt"
 printf '%s\n' "${all_variations[@]}" > "$structure_dir/all_variations.txt"
 
+# Check file contents for matches
+echo "Checking file contents for matches..."
+echo "Saving content changes to: $structure_dir/file_content_changes.txt"
+> "$structure_dir/file_content_changes.txt"  # Create empty file
+
+# Read original structure and check each file
+while IFS= read -r file_path; do
+    if [ -f "$file_path" ]; then
+        # Convert path to be relative to target directory
+        rel_path="${file_path#$temp_dir/}"
+        matched_pairs=()
+        
+        # Check if file content contains any of the old text patterns
+        for variation in "${all_variations[@]}"; do
+            IFS=':' read -r var_old var_new <<< "$variation"
+            # Use grep to find matches and count occurrences
+            match_count=$(grep -c "$var_old" "$file_path" 2>/dev/null || true)
+            if [ "$match_count" -gt 0 ]; then
+                matched_pairs+=("$var_old:$var_new:$match_count")
+            fi
+        done
+        
+        # If any matches were found, save file path and matches in a single line
+        if [ ${#matched_pairs[@]} -gt 0 ]; then
+            echo "$rel_path|${matched_pairs[*]}" >> "$structure_dir/file_content_changes.txt"
+        fi
+    fi
+done < "$structure_dir/original_structure.txt"
+
 # Process all variations at once
 for variation in "${all_variations[@]}"; do
     IFS=':' read -r var_old var_new <<< "$variation"
@@ -181,9 +210,7 @@ fi
 
 # Create a combined file with original and final paths
 paste "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt" > "$structure_dir/combined.txt"
-echo "Combined structure file contents:"
-cat "$structure_dir/combined.txt"
-echo "----------------------------------------"
+
 
 # Compare original and final structures for all paths
 while IFS=$'\t' read -r old_path new_path; do
@@ -199,6 +226,23 @@ while IFS=$'\t' read -r old_path new_path; do
 done < "$structure_dir/combined.txt"
 
 echo "----------------------------------------"
+
+# Show file content changes
+if [ -s "$structure_dir/file_content_changes.txt" ]; then
+    echo "File Content Changes:"
+    while IFS='|' read -r file_path patterns; do
+        echo "     - $file_path"
+        echo "       Replace:"
+        # Split patterns into array and show each pair
+        IFS=' ' read -ra pairs <<< "$patterns"
+        for pair in "${pairs[@]}"; do
+            IFS=':' read -r old new count <<< "$pair"
+            echo "         $old -> $new ($count occurrences)"
+        done
+    done < "$structure_dir/file_content_changes.txt"
+    echo "----------------------------------------"
+fi
+
 echo "Dry run complete. No changes made."
 
 # Cleanup
