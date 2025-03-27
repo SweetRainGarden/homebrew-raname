@@ -212,6 +212,9 @@ fi
 # Create a combined file with original and final paths
 paste "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt" > "$structure_dir/combined.txt"
 
+# Create clean version without temp directory paths
+sed "s|$temp_dir/||g" "$structure_dir/combined.txt" > "$structure_dir/combined_clean.txt"
+
 # Check if root directory name changed
 root_changed=false
 first_line=$(head -n 1 "$structure_dir/combined.txt")
@@ -289,13 +292,54 @@ if [ "$dry_run" = "false" ]; then
     
     # Process file moves/renames
     echo "Processing file moves and renames..."
+    
+    # First handle root directory change if needed
+    if [ "$root_changed" = "true" ]; then
+        echo "Root directory will be renamed from '$old_root' to '$new_root'"
+        # Create new root directory
+        mkdir -p "$final_dir/$new_root"
+    fi
+    
+    # Process all paths in order (directories first, then files)
     while IFS=$'\t' read -r old_path new_path; do
         if [ -n "$old_path" ] && [ -n "$new_path" ]; then
             # Convert paths to be relative to temp directory
             rel_old_path="${old_path#$temp_dir/}"
             rel_new_path="${new_path#$temp_dir/}"
             
-            # if [ "$rel_old_path" != "$rel_new_path" ]; then
+            if [ "$rel_old_path" != "$rel_new_path" ]; then
+                if [ "$root_changed" = "true" ]; then
+                    # copy the children to the new root
+                    echo "Root directory will be renamed from '$old_root' to '$new_root'"
+                    # Create new root directory
+                    mkdir -p "$final_dir/$new_root"
+                    
+                    # Skip the root directory itself
+                    if [ "$rel_old_path" != "$old_root" ]; then
+                        echo "  Copying: $rel_old_path -> $rel_new_path"
+                        # Create target directory if it doesn't exist
+                        target_dir="$final_dir/$(dirname "$rel_new_path")"
+                        mkdir -p "$target_dir"
+                        
+                        # Only copy files using cat
+                        if [ -f "$temp_dir/$rel_old_path" ]; then
+                            cat "$temp_dir/$rel_old_path" > "$final_dir/$rel_new_path"
+                        fi
+                    fi
+                else
+                    echo "  Copying: $rel_old_path -> $rel_new_path"
+                    # Create target directory if it doesn't exist
+                    target_dir="$final_dir/$(dirname "$rel_new_path")"
+                    mkdir -p "$target_dir"
+                    
+                    # Copy with overwrite
+                    if [ -f "$temp_dir/$rel_old_path" ]; then
+                        cp -f "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+                    elif [ -d "$temp_dir/$rel_old_path" ]; then
+                        cp -rf "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+                    fi
+                fi
+            else
                 echo "  Copying: $rel_old_path -> $rel_new_path"
                 # Create target directory if it doesn't exist
                 target_dir="$final_dir/$(dirname "$rel_new_path")"
@@ -307,10 +351,16 @@ if [ "$dry_run" = "false" ]; then
                 elif [ -d "$temp_dir/$rel_old_path" ]; then
                     cp -rf "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
                 fi
-            # fi
+            fi
         fi
     done < "$structure_dir/combined.txt"
     
+
+    if [ "$root_changed" = "true" ]; then
+        rm -rf "$final_dir/$old_root"
+    fi
+
+
     echo "All changes completed in: $final_dir"
     echo "Opening final directory..."
     open "$final_dir"
