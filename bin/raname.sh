@@ -150,13 +150,7 @@ for pair in "${PAIRS[@]}"; do
         echo "Processing variation: $var_old -> $var_new"
         
         # Create new structure with replacements
-        # First handle directory paths
-        perl -pe "s|\Q$var_old\E|$var_new|g" "$structure_dir/final_structure.txt" > "$structure_dir/final_structure.txt.new"
-        mv "$structure_dir/final_structure.txt.new" "$structure_dir/final_structure.txt"
-        
-        # Then handle filenames
-        perl -pe "s|/([^/]*\Q$var_old\E[^/]*)$|/$var_new|g" "$structure_dir/final_structure.txt" > "$structure_dir/final_structure.txt.new"
-        mv "$structure_dir/final_structure.txt.new" "$structure_dir/final_structure.txt"
+        perl -pi -e "s|\Q$var_old\E|$var_new|g" "$structure_dir/final_structure.txt"
     done
     echo ""
 done
