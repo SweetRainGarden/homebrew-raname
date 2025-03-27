@@ -187,10 +187,11 @@ echo "----------------------------------------"
 
 # Compare original and final structures for all paths
 while IFS=$'\t' read -r old_path new_path; do
-    if [ -n "$old_path" ]; then
+    if [ -n "$old_path" ] && [ -n "$new_path" ]; then
         # Convert paths to be relative to target directory
         rel_old_path="${old_path#$temp_dir/}"
         rel_new_path="${new_path#$temp_dir/}"
+        # Only show if paths are different
         if [ "$rel_old_path" != "$rel_new_path" ]; then
             echo "     - $rel_old_path -> $rel_new_path"
         fi
