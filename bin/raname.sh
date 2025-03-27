@@ -5,7 +5,7 @@ set -e  # Exit on error
 # Default settings
 strict_mode=false  # Default is loose mode
 exclude_dirs=(".git")  # Always exclude .git
-dry_run=true  # Always in dry run mode for testing
+dry_run=false
 copy_mode=false
 log_dir="${HOME}/.raname_logs"
 log_file="${log_dir}/raname.log"
@@ -243,7 +243,65 @@ if [ -s "$structure_dir/file_content_changes.txt" ]; then
     echo "----------------------------------------"
 fi
 
-echo "Dry run complete. No changes made."
+echo "----------------------------------------"
+
+# If not dry run, perform actual changes
+if [ "$dry_run" = "false" ]; then
+    echo "Performing actual changes..."
+    
+    # Create final directory
+    final_dir="$(mktemp -d)"
+    echo "Created final directory: $final_dir"
+    
+    # Process file content changes
+    echo "Processing file content changes..."
+    while IFS='|' read -r file_path patterns; do
+        if [ -f "$temp_dir/$file_path" ]; then
+            echo "  Processing: $file_path"
+            # Create target directory if it doesn't exist
+            target_dir="$final_dir/$(dirname "$file_path")"
+            mkdir -p "$target_dir"
+            
+            # Apply all replacements
+            cp "$temp_dir/$file_path" "$final_dir/$file_path"
+            for pair in $patterns; do
+                IFS=':' read -r old new count <<< "$pair"
+                if [ "$count" -gt 0 ]; then
+                    perl -pi -e "s|\Q$old\E|$new|g" "$final_dir/$file_path"
+                fi
+            done
+        fi
+    done < "$structure_dir/file_content_changes.txt"
+    
+    # Process file moves/renames
+    echo "Processing file moves and renames..."
+    while IFS=$'\t' read -r old_path new_path; do
+        if [ -n "$old_path" ] && [ -n "$new_path" ]; then
+            # Convert paths to be relative to target directory
+            rel_old_path="${old_path#$temp_dir/}"
+            rel_new_path="${new_path#$temp_dir/}"
+            
+            echo "  Moving: $rel_old_path -> $rel_new_path"
+            # Create target directory if it doesn't exist
+            target_dir="$final_dir/$(dirname "$rel_new_path")"
+            mkdir -p "$target_dir"
+            
+            # Copy with overwrite
+            if [ -f "$temp_dir/$rel_old_path" ]; then
+                cp -f "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+            elif [ -d "$temp_dir/$rel_old_path" ]; then
+                cp -rf "$temp_dir/$rel_old_path" "$final_dir/$rel_new_path"
+            fi
+        fi
+    done < "$structure_dir/combined.txt"
+    
+    echo "All changes completed in: $final_dir"
+    echo "Opening final directory..."
+    open "$final_dir"
+    echo "Changes completed successfully."
+else
+    echo "Dry run complete. No changes made."
+fi
 
 # Cleanup
 if [ "$DEBUG" != "true" ]; then
