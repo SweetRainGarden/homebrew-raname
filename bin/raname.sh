@@ -185,23 +185,9 @@ echo "Combined structure file contents:"
 cat "$structure_dir/combined.txt"
 echo "----------------------------------------"
 
-echo "  1. Rename directories:"
-# Compare original and final structures for directories
+# Compare original and final structures for all paths
 while IFS=$'\t' read -r old_path new_path; do
-    if [ -n "$old_path" ] && [ -d "$old_path" ]; then
-        # Convert paths to be relative to target directory
-        rel_old_path="${old_path#$temp_dir/}"
-        rel_new_path="${new_path#$temp_dir/}"
-        if [ "$rel_old_path" != "$rel_new_path" ]; then
-            echo "     - $rel_old_path -> $rel_new_path"
-        fi
-    fi
-done < "$structure_dir/combined.txt"
-
-echo "  2. Rename files:"
-# Compare original and final structures for files
-while IFS=$'\t' read -r old_path new_path; do
-    if [ -n "$old_path" ] && [ -f "$old_path" ]; then
+    if [ -n "$old_path" ]; then
         # Convert paths to be relative to target directory
         rel_old_path="${old_path#$temp_dir/}"
         rel_new_path="${new_path#$temp_dir/}"
