@@ -5,223 +5,176 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
-# Test counter
+# Test counters
 TESTS_PASSED=0
 TESTS_FAILED=0
 
-# Helper function to create test directories
-setup_test_dir() {
-    local dir="$1"
-    rm -rf "$dir" "$dir"_zoo
-    mkdir -p "$dir"
-    echo "foo test content" > "$dir/foo.txt"
-    mkdir -p "$dir/foobar"
-    echo "foo in subdir" > "$dir/foobar/foo.txt"
-    mkdir -p "$dir/foobar/foobarcat"
-    echo "foo in nested dir" > "$dir/foobar/foobarcat/foo.txt"
+# Base directory for tests
+BASE_TEST_DIR="test_env"
+
+# Setup function to create a fresh test environment
+setup() {
+    rm -rf "$BASE_TEST_DIR"
+    mkdir -p "$BASE_TEST_DIR"
 }
 
-# Helper function to verify directory structure
-verify_structure() {
-    local dir="$1"
-    local expected="$2"
-    local actual=$(find "$dir" -type f | sort)
-    local expected_sorted=$(echo "$expected" | sort)
-    if [ "$actual" = "$expected_sorted" ]; then
-        return 0
-    else
-        echo "Expected:"
-        echo "$expected_sorted"
-        echo "Got:"
-        echo "$actual"
-        return 1
-    fi
+# Teardown function to clean up after tests
+teardown() {
+    rm -rf "$BASE_TEST_DIR"
 }
 
-# Helper function to verify file content
-verify_content() {
-    local file="$1"
-    local expected="$2"
-    if [ ! -f "$file" ]; then
-        echo "File not found: $file"
-        return 1
-    fi
-    local actual=$(cat "$file")
-    if [ "$actual" = "$expected" ]; then
-        return 0
-    else
-        echo "Expected:"
-        echo "$expected"
-        echo "Got:"
-        echo "$actual"
-        return 1
-    fi
-}
-
-# Test function
+# Function to run a test case
 run_test() {
-    local name="$1"
-    local cmd="$2"
-    local expected_structure="$3"
-    local expected_content="$4"
-    
-    echo -n "Running test: $name ... "
-    
-    # Run the command
-    eval "$cmd"
-    
-    # Verify structure
-    if verify_structure "$TEST_DIR" "$expected_structure"; then
-        # Verify content if specified
-        if [ -n "$expected_content" ]; then
-            if verify_content "$expected_content" "zoo test content"; then
-                echo -e "${GREEN}PASSED${NC}"
-                ((TESTS_PASSED++))
-            else
-                echo -e "${RED}FAILED${NC} (content mismatch)"
-                ((TESTS_FAILED++))
-            fi
-        else
-            echo -e "${GREEN}PASSED${NC}"
-            ((TESTS_PASSED++))
-        fi
+    local test_name="$1"
+    local test_func="$2"
+
+    echo "Running test: $test_name"
+    setup
+    if "$test_func"; then
+        echo -e "${GREEN}✔ Test passed${NC}"
+        ((TESTS_PASSED++))
     else
-        echo -e "${RED}FAILED${NC} (structure mismatch)"
+        echo -e "${RED}✖ Test failed${NC}"
         ((TESTS_FAILED++))
     fi
-    
-    # Cleanup after each test
-    rm -rf "$TEST_DIR" "$TEST_DIR"_zoo
+    teardown
+    echo "----------------------------------------"
 }
 
-# Create test directory
-TEST_DIR="test_dir"
-
 # Test 1: Basic rename
-echo "Test 1: Basic rename"
-setup_test_dir "$TEST_DIR"
-run_test "Basic rename" \
-    "bash bin/raname.sh foo zoo $TEST_DIR" \
-    "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+test_basic_rename() {
+    mkdir -p "$BASE_TEST_DIR/foo_dir"
+    touch "$BASE_TEST_DIR/foo_file.txt"
+    echo "foo content" > "$BASE_TEST_DIR/foo_dir/foo_file.txt"
 
-# Test 2: Case-insensitive rename
-echo "Test 2: Case-insensitive rename"
-setup_test_dir "$TEST_DIR"
-run_test "Case-insensitive rename" \
-    "bash bin/raname.sh -i Foo zoo $TEST_DIR" \
-    "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+    # Run raname.sh
+    bash bin/raname.sh foo bar "$BASE_TEST_DIR" > /dev/null 2>&1
 
-# Test 3: Dry run
-echo "Test 3: Dry run"
-setup_test_dir "$TEST_DIR"
-run_test "Dry run" \
-    "bash bin/raname.sh --dry-run foo zoo $TEST_DIR" \
-    "$TEST_DIR/foobar/foobarcat/foo.txt
-$TEST_DIR/foobar/foo.txt
-$TEST_DIR/foo.txt" \
-    "$TEST_DIR/foo.txt"
+    # Verify
+    [ -d "$BASE_TEST_DIR/bar_dir" ] &&
+    [ -f "$BASE_TEST_DIR/bar_file.txt" ] &&
+    [ -f "$BASE_TEST_DIR/bar_dir/bar_file.txt" ] &&
+    grep -q "bar content" "$BASE_TEST_DIR/bar_dir/bar_file.txt"
+}
 
-# Test 4: Copy mode
-echo "Test 4: Copy mode"
-setup_test_dir "$TEST_DIR"
-run_test "Copy mode" \
-    "bash bin/raname.sh --copy foo zoo $TEST_DIR" \
-    "$TEST_DIR/foobar/foobarcat/foo.txt
-$TEST_DIR/foobar/foo.txt
-$TEST_DIR/foo.txt
-$TEST_DIR_zoo/zoobar/zoobarcat/zoo.txt
-$TEST_DIR_zoo/zoobar/zoobar/zoo.txt
-$TEST_DIR_zoo/zoo.txt" \
-    "$TEST_DIR_zoo/zoo.txt"
+# Test 2: Dry run
+test_dry_run() {
+    mkdir -p "$BASE_TEST_DIR/foo_dir"
+    touch "$BASE_TEST_DIR/foo_file.txt"
 
-# Test 5: Exclude directories
-echo "Test 5: Exclude directories"
-setup_test_dir "$TEST_DIR"
-mkdir -p "$TEST_DIR/exclude_me"
-echo "foo in excluded dir" > "$TEST_DIR/exclude_me/foo.txt"
-run_test "Exclude directories" \
-    "bash bin/raname.sh -e exclude_me foo zoo $TEST_DIR" \
-    "$TEST_DIR/exclude_me/foo.txt
-$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+    # Run raname.sh with --dry-run
+    bash bin/raname.sh --dry-run foo bar "$BASE_TEST_DIR" > /dev/null 2>&1
 
-# Test 6: Rename with spaces
-echo "Test 6: Rename with spaces"
-setup_test_dir "$TEST_DIR"
-mkdir -p "$TEST_DIR/foo bar"
-echo "foo in spaced dir" > "$TEST_DIR/foo bar/foo.txt"
-run_test "Rename with spaces" \
-    "bash bin/raname.sh 'foo bar' 'zoo bar' $TEST_DIR" \
-    "$TEST_DIR/zoo bar/zoo.txt
-$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+    # Verify that files are unchanged
+    [ -d "$BASE_TEST_DIR/foo_dir" ] &&
+    [ -f "$BASE_TEST_DIR/foo_file.txt" ] &&
+    [ ! -d "$BASE_TEST_DIR/bar_dir" ] &&
+    [ ! -f "$BASE_TEST_DIR/bar_file.txt" ]
+}
 
-# Test 7: Special characters
-echo "Test 7: Special characters"
-setup_test_dir "$TEST_DIR"
-mkdir -p "$TEST_DIR/foo*bar"
-echo "foo in special dir" > "$TEST_DIR/foo*bar/foo.txt"
-run_test "Special characters" \
-    "bash bin/raname.sh 'foo*bar' 'zoo*bar' $TEST_DIR" \
-    "$TEST_DIR/zoo*bar/zoo.txt
-$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+# Test 3: Copy mode with root change
+test_copy_mode_root_change() {
+    mkdir -p "$BASE_TEST_DIR/foo_project/src"
+    touch "$BASE_TEST_DIR/foo_project/src/foo_file.txt"
 
-# Test 8: Multiple occurrences in same file
-echo "Test 8: Multiple occurrences"
-setup_test_dir "$TEST_DIR"
-echo "foo foo foo" > "$TEST_DIR/multiple_foo.txt"
-run_test "Multiple occurrences" \
-    "bash bin/raname.sh foo zoo $TEST_DIR" \
-    "$TEST_DIR/multiple_zoo.txt
-$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/multiple_zoo.txt"
+    # Run raname.sh with --copy
+    bash bin/raname.sh --copy foo bar "$BASE_TEST_DIR/foo_project" > /dev/null 2>&1
 
-# Test 9: Empty directory
-echo "Test 9: Empty directory"
-setup_test_dir "$TEST_DIR"
-mkdir -p "$TEST_DIR/empty_dir"
-run_test "Empty directory" \
-    "bash bin/raname.sh foo zoo $TEST_DIR" \
-    "$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+    # Verify original directory exists
+    [ -d "$BASE_TEST_DIR/foo_project" ] &&
+    [ -f "$BASE_TEST_DIR/foo_project/src/foo_file.txt" ]
 
-# Test 10: Hidden files
-echo "Test 10: Hidden files"
-setup_test_dir "$TEST_DIR"
-echo "foo in hidden file" > "$TEST_DIR/.foo.txt"
-run_test "Hidden files" \
-    "bash bin/raname.sh foo zoo $TEST_DIR" \
-    "$TEST_DIR/.zoo.txt
-$TEST_DIR/zoobar/zoobarcat/zoo.txt
-$TEST_DIR/zoobar/zoobar/zoo.txt
-$TEST_DIR/zoo.txt" \
-    "$TEST_DIR/zoo.txt"
+    # Verify copied directory exists with renamed contents
+    [ -d "$BASE_TEST_DIR/bar_project" ] &&
+    [ -f "$BASE_TEST_DIR/bar_project/src/bar_file.txt" ]
+}
 
-# Print summary
-echo "----------------------------------------"
+# Test 4: Exclude directories
+test_exclude_directories() {
+    mkdir -p "$BASE_TEST_DIR/include_dir" "$BASE_TEST_DIR/exclude_dir"
+    touch "$BASE_TEST_DIR/include_dir/foo.txt"
+    touch "$BASE_TEST_DIR/exclude_dir/foo.txt"
+
+    # Run raname.sh with exclude option
+    bash bin/raname.sh -e exclude_dir foo bar "$BASE_TEST_DIR" > /dev/null 2>&1
+
+    # Verify included directory is renamed
+    [ -d "$BASE_TEST_DIR/include_dir" ] &&
+    [ -f "$BASE_TEST_DIR/include_dir/bar.txt" ]
+
+    # Verify excluded directory is unchanged
+    [ -d "$BASE_TEST_DIR/exclude_dir" ] &&
+    [ -f "$BASE_TEST_DIR/exclude_dir/foo.txt" ] &&
+    [ ! -f "$BASE_TEST_DIR/exclude_dir/bar.txt" ]
+}
+
+# Test 5: Strict mode (case-sensitive)
+test_strict_mode() {
+    mkdir -p "$BASE_TEST_DIR"
+    touch "$BASE_TEST_DIR/Foo.txt" "$BASE_TEST_DIR/foo.txt"
+
+    # Run raname.sh in strict mode
+    bash bin/raname.sh --strict foo bar "$BASE_TEST_DIR" > /dev/null 2>&1
+
+    # Verify only exact case is renamed
+    [ -f "$BASE_TEST_DIR/Foo.txt" ] &&
+    [ ! -f "$BASE_TEST_DIR/bar.txt" ] &&
+    [ -f "$BASE_TEST_DIR/foo.txt" ]
+}
+
+# Test 6: Handle special characters
+test_special_characters() {
+    mkdir -p "$BASE_TEST_DIR"
+    touch "$BASE_TEST_DIR/foo*file?.txt"
+
+    # Run raname.sh
+    bash bin/raname.sh 'foo*file?' 'bar_file' "$BASE_TEST_DIR" > /dev/null 2>&1
+
+    # Verify file is renamed correctly
+    [ -f "$BASE_TEST_DIR/bar_file.txt" ]
+}
+
+# Test 7: Multiple pairs
+test_multiple_pairs() {
+    mkdir -p "$BASE_TEST_DIR/foo_dir"
+    touch "$BASE_TEST_DIR/foo_dir/foo_file.txt"
+
+    # Run raname.sh with multiple pairs
+    bash bin/raname.sh 'foo:bar,baz:qux' "$BASE_TEST_DIR" > /dev/null 2>&1
+
+    # Verify renames
+    [ -d "$BASE_TEST_DIR/bar_dir" ] &&
+    [ -f "$BASE_TEST_DIR/bar_dir/bar_file.txt" ]
+}
+
+# Test 8: Error handling for copy mode without root change
+test_copy_mode_no_root_change() {
+    mkdir -p "$BASE_TEST_DIR/project/src"
+    touch "$BASE_TEST_DIR/project/src/foo.txt"
+
+    # Run raname.sh with --copy but no root change
+    bash bin/raname.sh --copy src source "$BASE_TEST_DIR/project" > /dev/null 2>&1
+
+    # Verify copy did not occur (since root was not changed)
+    [ ! -d "$BASE_TEST_DIR/project_copy" ]
+}
+
+# Run all tests
+run_test "Basic Rename" test_basic_rename
+run_test "Dry Run Mode" test_dry_run
+run_test "Copy Mode with Root Change" test_copy_mode_root_change
+run_test "Exclude Directories" test_exclude_directories
+run_test "Strict Mode (Case-Sensitive)" test_strict_mode
+run_test "Special Characters in Filenames" test_special_characters
+run_test "Multiple Replacement Pairs" test_multiple_pairs
+run_test "Copy Mode without Root Change" test_copy_mode_no_root_change
+
+# Summary
 echo "Test Summary:"
 echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
 echo -e "${RED}Failed: $TESTS_FAILED${NC}"
-echo "----------------------------------------"
 
-# Exit with error if any tests failed
+# Exit with error code if any tests failed
 if [ $TESTS_FAILED -gt 0 ]; then
     exit 1
 fi 

@@ -405,8 +405,7 @@ if [ "$dry_run" = "false" ]; then
         cp -r "$final_dir/$new_root" "$parent_dir/$dir_name"
     fi
 
-    echo "Opening final directory..."
-    open "$final_dir"
+    # open "$final_dir"
     echo "Changes completed successfully."
 else
     echo "Dry run complete. No changes made."
@@ -418,7 +417,7 @@ if [ "$DEBUG" != "true" ]; then
     rm -rf "$structure_dir"
 else
     echo "Debug mode: Structure directory is at: $structure_dir"
-    open "$structure_dir"
+    # open "$structure_dir"
 fi
 
 log "INFO" "Dry run completed."
