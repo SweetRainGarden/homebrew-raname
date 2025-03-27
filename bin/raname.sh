@@ -398,6 +398,11 @@ if [ "$dry_run" = "false" ]; then
             echo "Error: Failed to copy directory to parent directory"
             exit 1
         fi
+    else
+        # remove dir_name in parent directory
+        rm -rf "$parent_dir/$dir_name"
+        # copy final_dir to parent_dir
+        cp -r "$final_dir/$new_root" "$parent_dir/$dir_name"
     fi
 
     echo "Opening final directory..."
