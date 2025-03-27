@@ -136,6 +136,8 @@ echo "----------------------------------------"
 # Start with original structure
 cp "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt"
 
+# Preprocess all variations
+declare -a all_variations
 for pair in "${PAIRS[@]}"; do
     IFS=':' read -r old_text new_text <<< "$pair"
     echo "Processing pair: $old_text -> $new_text"
@@ -145,14 +147,20 @@ for pair in "${PAIRS[@]}"; do
     echo "Generated variations:"
     printf '%s\n' "${variations[@]}"
     
-    for variation in "${variations[@]}"; do
-        IFS=':' read -r var_old var_new <<< "$variation"
-        echo "Processing variation: $var_old -> $var_new"
-        
-        # Create new structure with replacements
-        perl -pi -e "s|\Q$var_old\E|$var_new|g" "$structure_dir/final_structure.txt"
-    done
+    # Add to all variations array
+    all_variations+=("${variations[@]}")
     echo ""
+done
+
+# Save all variations to a file
+echo "Saving all variations to: $structure_dir/all_variations.txt"
+printf '%s\n' "${all_variations[@]}" > "$structure_dir/all_variations.txt"
+
+# Process all variations at once
+for variation in "${all_variations[@]}"; do
+    IFS=':' read -r var_old var_new <<< "$variation"
+    echo "Processing variation: $var_old -> $var_new"
+    perl -pi -e "s|\Q$var_old\E|$var_new|g" "$structure_dir/final_structure.txt"
 done
 
 # Show dry run operations
