@@ -7,6 +7,7 @@ strict_mode=false  # Default is loose mode
 exclude_dirs=(".git")  # Always exclude .git
 dry_run=false
 copy_mode=false
+debug=false
 log_dir="${HOME}/.raname_logs"
 log_file="${log_dir}/raname.log"
 
@@ -65,6 +66,7 @@ usage() {
   echo "  -e, --exclude <dirs>  Comma-separated list of directories to exclude"
   echo "  --dry-run             Show what would be changed without modifying anything"
   echo "  --copy                Create a renamed copy instead of renaming in-place"
+  echo "  --debug               Enable debug mode to keep temporary files"
   echo "  -h, --help            Show this help message"
   echo ""
   echo "Pairs format: old_text:new_text,old_dir:new_dir"
@@ -79,6 +81,7 @@ while [[ $# -gt 0 ]]; do
     -e|--exclude) exclude_dirs+=(${2//,/ }); shift 2 ;;
     --dry-run) dry_run=true; shift ;;
     --copy) copy_mode=true; shift ;;
+    --debug) debug=true; shift ;;
     -h|--help) usage ;;
     --) shift; break ;;
     -*) echo "Unknown option: $1"; usage ;;
@@ -260,7 +263,10 @@ if [ -s "$structure_dir/file_content_changes.txt" ]; then
     echo "----------------------------------------"
 fi
 
+log "INFO" "Dry run completed."
 echo "----------------------------------------"
+
+
 
 # If not dry run, perform actual changes
 if [ "$dry_run" = "false" ]; then
@@ -412,12 +418,14 @@ else
 fi
 
 # Cleanup
-if [ "$DEBUG" != "true" ]; then
+if [ "$debug" != "true" ]; then
     rm -rf "$temp_dir"
     rm -rf "$structure_dir"
 else
     echo "Debug mode: Structure directory is at: $structure_dir"
-    # open "$structure_dir"
+    open "$structure_dir"
+    open "$temp_dir"
 fi
 
-log "INFO" "Dry run completed."
+
+
