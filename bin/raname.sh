@@ -143,21 +143,17 @@ cp "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt"
 declare -a all_variations
 for pair in "${PAIRS[@]}"; do
     IFS=':' read -r old_text new_text <<< "$pair"
-    echo "Processing pair: $old_text -> $new_text"
-    
-    # Generate case variations
     variations=($(generate_case_variations "$old_text" "$new_text"))
-    echo "Generated variations:"
     printf '%s\n' "${variations[@]}"
-    
-    # Add to all variations array
     all_variations+=("${variations[@]}")
-    echo ""
 done
 
 # Save all variations to a file
 echo "Saving all variations to: $structure_dir/all_variations.txt"
 printf '%s\n' "${all_variations[@]}" > "$structure_dir/all_variations.txt"
+echo "----------------------------------------"
+cat "$structure_dir/all_variations.txt"
+echo "----------------------------------------"
 
 # Check file contents for matches
 echo "Checking file contents for matches..."
@@ -170,8 +166,7 @@ while IFS= read -r file_path; do
         # Convert path to be relative to target directory
         rel_path="${file_path#$temp_dir/}"
         matched_pairs=()
-        
-        # Check if file content contains any of the old text patterns
+
         for variation in "${all_variations[@]}"; do
             IFS=':' read -r var_old var_new <<< "$variation"
             # Use grep to find matches and count occurrences
@@ -191,16 +186,9 @@ done < "$structure_dir/original_structure.txt"
 # Process all variations at once
 for variation in "${all_variations[@]}"; do
     IFS=':' read -r var_old var_new <<< "$variation"
-    echo "Processing variation: $var_old -> $var_new"
     perl -pi -e "s|\Q$var_old\E|$var_new|g" "$structure_dir/final_structure.txt"
 done
 
-# Show dry run operations
-echo "Dry run - would perform the following operations:"
-echo "----------------------------------------"
-echo "Directory: $target_dir"
-
-echo "Changes:"
 
 # Get line counts
 orig_count=$(wc -l < "$structure_dir/original_structure.txt")
@@ -218,9 +206,12 @@ paste "$structure_dir/original_structure.txt" "$structure_dir/final_structure.tx
 # Create clean version without temp directory paths
 sed "s|$temp_dir/||g" "$structure_dir/combined.txt" > "$structure_dir/combined_clean.txt"
 
-# Check if root directory name changed
 root_changed=false
 first_line=$(head -n 1 "$structure_dir/combined.txt")
+
+echo "----------------------------------------"
+echo "raname will perform the following operations:"
+
 if [ -n "$first_line" ]; then
     old_root=$(echo "$first_line" | cut -f1 | xargs basename)
     new_root=$(echo "$first_line" | cut -f2 | xargs basename)
@@ -231,6 +222,7 @@ if [ -n "$first_line" ]; then
         echo "Root directory name '$old_root' remains unchanged"
     fi
 fi
+echo "File and directory changes:"
 
 # Compare original and final structures for all paths
 while IFS=$'\t' read -r old_path new_path; do
@@ -264,12 +256,11 @@ if [ -s "$structure_dir/file_content_changes.txt" ]; then
 fi
 
 log "INFO" "Dry run completed."
-echo "----------------------------------------"
 
 
 
 # If not dry run, perform actual changes
-if [ "$dry_run" = "false" ]; then
+if [ "$dry_run" != "true" ]; then
     echo "Performing actual changes..."
     
     # Create final directory
@@ -411,10 +402,8 @@ if [ "$dry_run" = "false" ]; then
         cp -r "$final_dir/$new_root" "$parent_dir/$dir_name"
     fi
 
-    # open "$final_dir"
     echo "Changes completed successfully."
-else
-    echo "Dry run complete. No changes made."
+    
 fi
 
 # Cleanup
@@ -423,6 +412,7 @@ if [ "$debug" != "true" ]; then
     rm -rf "$structure_dir"
 else
     echo "Debug mode: Structure directory is at: $structure_dir"
+    echo "Debug mode: Temporary directory is at: $temp_dir"
     open "$structure_dir"
     open "$temp_dir"
 fi
