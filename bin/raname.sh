@@ -59,16 +59,14 @@ generate_case_variations() {
 
 # Function to generate directory structure
 generate_directory_structure() {
-
-    
     local target_dir="$1"
     local output_file="$2"
     
     # Clear the output file
     > "$output_file"
     
-    # Get all directories
-    find "$target_dir" -type d -print0 | while IFS= read -r -d '' dir; do
+    # Get all directories except the root directory itself
+    find "$target_dir" -mindepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
         echo "$dir" >> "$output_file"
     done
     
@@ -80,8 +78,6 @@ generate_directory_structure() {
     #strip the target_dir path from the output file
     sed "s|$target_dir/||g" "$output_file" > "$output_file.clean"
     mv "$output_file.clean" "$output_file"
-
-
 }
 
 # Function to compare directory structures
