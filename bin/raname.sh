@@ -8,6 +8,7 @@ exclude_dirs=(".git")  # Always exclude .git
 dry_run=false
 copy_mode=false
 debug=false
+open_first_file=true  # Flag to open first file with replacements
 log_dir="${HOME}/.raname_logs"
 log_file="${log_dir}/raname.log"
 
@@ -97,6 +98,58 @@ compare_directory_structures() {
     return 0
 }
 
+# Function to process file content changes
+process_file_content_changes() {
+    local temp_dir="$1"
+    local final_dir="$2"
+    local structure_dir="$3"
+    local first_file_opened=false
+
+    echo "Processing file content changes..."
+    while IFS='|' read -r file_path patterns; do
+        if [ -f "$temp_dir/$file_path" ]; then
+            echo "  Processing: $file_path"
+            # Create target directory if it doesn't exist
+            target_dir="$final_dir/$(dirname "$file_path")"
+            mkdir -p "$target_dir"
+            
+            # Apply all replacements
+            # cp "$temp_dir/$file_path" "$final_dir/$file_path"
+            
+            # Split patterns into array and process each pair
+            IFS=' ' read -ra pairs <<< "$patterns"
+            for pair in "${pairs[@]}"; do
+                IFS=':' read -r old new count <<< "$pair"
+                if [ "$count" -gt 0 ]; then
+                    echo "    Replacing '$old' with '$new' ($count occurrences)"
+                    # Escape special characters for sed
+                    escaped_old=$(echo "$old" | sed 's/[][\/$*.^|[]/\\&/g')
+                    escaped_new=$(echo "$new" | sed 's/[][\/$*.^|[]/\\&/g')
+                    # Apply single replacement in-place
+                    echo "sed -i '' 's/$escaped_old/$escaped_new/g' '$final_dir/$file_path'"
+                    sed -i '' "s/$escaped_old/$escaped_new/g" "$final_dir/$file_path"
+                    
+                    # Verify the change
+                    actual_count=$(grep -c "$new" "$final_dir/$file_path")
+                    if [ "$actual_count" -gt 0 ]; then
+                        echo "    ✓ Verified $actual_count replacements of '$new' in $file_path"
+                        # Open first file with replacements if we haven't opened one yet
+                        if [ "$first_file_opened" = "false" ]; then
+                            echo "    Opening first file with replacements: $file_path"
+                            cat "$final_dir/$file_path"
+                            first_file_opened=true
+                        fi
+                    else
+                        echo "    ⚠ Warning: No occurrences of '$new' found in $file_path after replacement"
+                        echo "    Original content:"
+                        grep -n "$old" "$final_dir/$file_path" || true
+                    fi
+                fi
+            done
+        fi
+    done < "$structure_dir/file_content_changes.txt"
+}
+
 # Usage guide
 usage() {
   echo "Usage: raname [OPTIONS] <pairs> [directory]"
@@ -107,6 +160,7 @@ usage() {
   echo "  --dry-run             Show what would be changed without modifying anything"
   echo "  --copy                Create a renamed copy instead of renaming in-place"
   echo "  --debug               Enable debug mode to keep temporary files"
+  echo "  --open-first          Open the first file with replacements"
   echo "  -h, --help            Show this help message"
   echo ""
   echo "Pairs format: old_text:new_text,old_dir:new_dir"
@@ -122,6 +176,7 @@ while [[ $# -gt 0 ]]; do
     --dry-run) dry_run=true; shift ;;
     --copy) copy_mode=true; shift ;;
     --debug) debug=true; shift ;;
+    --open-first) open_first_file=true; shift ;;
     -h|--help) usage ;;
     --) shift; break ;;
     -*) echo "Unknown option: $1"; usage ;;
@@ -311,25 +366,11 @@ if [ "$dry_run" != "true" ]; then
     echo "Created final directory: $final_dir"
     
     # Process file content changes
-    echo "Processing file content changes..."
-    while IFS='|' read -r file_path patterns; do
-        if [ -f "$temp_dir/$file_path" ]; then
-            echo "  Processing: $file_path"
-            # Create target directory if it doesn't exist
-            target_dir="$final_dir/$(dirname "$file_path")"
-            mkdir -p "$target_dir"
-            
-            # Apply all replacements
-            cp "$temp_dir/$file_path" "$final_dir/$file_path"
-            for pair in $patterns; do
-                IFS=':' read -r old new count <<< "$pair"
-                if [ "$count" -gt 0 ]; then
-                    perl -pi -e "s|\Q$old\E|$new|g" "$final_dir/$file_path"
-                fi
-            done
-        fi
-    done < "$structure_dir/file_content_changes.txt"
+    process_file_content_changes "$temp_dir" "$temp_dir" "$structure_dir"
     
+    open "$final_dir"
+
+
     # Process file moves/renames
     echo "Processing file moves and renames..."
     
