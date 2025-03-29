@@ -57,6 +57,50 @@ generate_case_variations() {
     echo "${unique_variations[@]}"
 }
 
+# Function to generate directory structure
+generate_directory_structure() {
+
+    
+    local target_dir="$1"
+    local output_file="$2"
+    
+    # Clear the output file
+    > "$output_file"
+    
+    # Get all directories
+    find "$target_dir" -type d -print0 | while IFS= read -r -d '' dir; do
+        echo "$dir" >> "$output_file"
+    done
+    
+    # Get all files
+    find "$target_dir" -type f ! -name ".DS_Store" -print0 | while IFS= read -r -d '' file; do
+        echo "$file" >> "$output_file"
+    done
+
+    #strip the target_dir path from the output file
+    sed "s|$target_dir/||g" "$output_file" > "$output_file.clean"
+    mv "$output_file.clean" "$output_file"
+
+
+}
+
+# Function to compare directory structures
+compare_directory_structures() {
+    local expected_file="$1"
+    local actual_file="$2"
+    #compare the two files directly
+    # add if the files are different, print the diff
+    if ! diff -w "$expected_file" "$actual_file" > /dev/null; then
+        echo "Error: Directory structures do not match!"
+        echo "Expected structure:"
+        cat "$expected_file"
+        echo "Actual structure:"
+        cat "$actual_file"
+        return 1
+    fi
+    return 0
+}
+
 # Usage guide
 usage() {
   echo "Usage: raname [OPTIONS] <pairs> [directory]"
@@ -199,6 +243,9 @@ if [ "$orig_count" != "$final_count" ]; then
     echo "Original: $orig_count, Final: $final_count"
     exit 1
 fi
+
+#let's strip the temp_dir path, structure_dir path, and original target_dir path from the final_structure.txt
+sed "s|$temp_dir/||g" "$structure_dir/final_structure.txt" > "$structure_dir/final_structure_clean.txt"
 
 # Create a combined file with original and final paths
 paste "$structure_dir/original_structure.txt" "$structure_dir/final_structure.txt" > "$structure_dir/combined.txt"
@@ -359,6 +406,19 @@ if [ "$dry_run" != "true" ]; then
 
 
     echo "All changes completed in: $final_dir"
+
+    # Validate final directory structure matches expected structure
+    echo "Validating final directory structure..."
+    actual_structure_file="$structure_dir/actual_final_structure.txt"
+    
+    # Generate actual structure
+    generate_directory_structure "$final_dir" "$actual_structure_file"
+    
+    # Compare structures
+    if ! compare_directory_structures "$structure_dir/final_structure_clean.txt" "$actual_structure_file"; then
+        exit 1
+    fi
+    echo "Directory structure validation passed."
 
     # Handle copy mode when root has changed
     if [ "$copy_mode" = "true" ] && [ "$root_changed" = "true" ]; then
